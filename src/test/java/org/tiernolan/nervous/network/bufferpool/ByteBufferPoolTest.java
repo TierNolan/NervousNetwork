@@ -1,12 +1,12 @@
 package org.tiernolan.nervous.network.bufferpool;
 
+import static org.junit.Assert.assertTrue;
+
 import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
 
 public class ByteBufferPoolTest {
 	
@@ -37,6 +37,32 @@ public class ByteBufferPoolTest {
 		}
 	}
 	
+	@Test
+	public void testCache() {
+		
+		int depth = 4;
+		
+		ByteBufferPool pool = new ByteBufferPool(MAX_SIZE, depth);
+		
+		@SuppressWarnings("unchecked")
+		Reference<ByteBuffer>[] ref = new Reference[depth];
+		ByteBuffer[] buf = new ByteBuffer[depth];
+		
+		for (int i = 0; i < depth; i++) {
+			for (int j = 0; j <= i; j++) {
+				ref[j] = pool.get(1024);
+				buf[j] = ref[j].get();
+			}
+			for (int j = 0; j <= i; j++) {
+				pool.put(ref[j]);
+			}
+			for (int j = 0; j <= i; j++) {
+				Reference<ByteBuffer> r = pool.get(1024);
+				assertTrue("Unexpected buffer returned from buffer queue", ref[j] == r);
+			}
+		}
+		
+	}
 	
 	private final void testBuffer(ByteBufferPool pool, int size) {
 		

@@ -5,17 +5,24 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 
 public class ByteBufferQueue {
+	
+	protected final static int DEFAULT_DEPTH = 4;
 
 	private final int size;
-	private final ArrayBlockingQueue<FlexibleReference<ByteBuffer>> queue = new ArrayBlockingQueue<FlexibleReference<ByteBuffer>>(4);
+	private final ArrayBlockingQueue<FlexibleReference<ByteBuffer>> queue;
 
 	public ByteBufferQueue(int size) {
+		this(size, DEFAULT_DEPTH);
+	}
+	
+	public ByteBufferQueue(int size, int depth) {
+		this.queue = new ArrayBlockingQueue<FlexibleReference<ByteBuffer>>(depth);
 		this.size = size;
 	}
 
 	public Reference<ByteBuffer> get() {
 		FlexibleReference<ByteBuffer> ref;
-		while ((ref = queue.poll()) != null && ref.setHard())
+		while ((ref = queue.poll()) != null && !ref.setHard())
 			;
 
 		if (ref != null) {

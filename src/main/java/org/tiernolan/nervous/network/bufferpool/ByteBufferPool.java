@@ -7,8 +7,12 @@ public class ByteBufferPool {
 	
 	public final ThreadLocalByteBufferPool pool32;
 	public final ThreadLocalByteBufferPool[] pools;
-
+	
 	public ByteBufferPool(int maxSize) {
+		this(maxSize, ByteBufferQueue.DEFAULT_DEPTH);
+	}
+
+	public ByteBufferPool(int maxSize, int depth) {
 		if (maxSize < 0) {
 			throw new IllegalArgumentException("Maximum size cannot be less than zero");
 		} else if (maxSize < 32) {
@@ -16,13 +20,13 @@ public class ByteBufferPool {
 		}
 	    int numPools = 27 - Integer.numberOfLeadingZeros(maxSize - 1); 
 	    
-	    pool32 = new ThreadLocalByteBufferPool(32);
+	    pool32 = new ThreadLocalByteBufferPool(32, depth);
 	    
 	    pools = new ThreadLocalByteBufferPool[numPools];
 	    
 	    int size = 64;
 	    for (int i = 0; i < numPools; i++) {
-	    	pools[i] = new ThreadLocalByteBufferPool(size);
+	    	pools[i] = new ThreadLocalByteBufferPool(size, depth);
 	    	size *= 2;
 	    }
 	}
