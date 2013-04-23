@@ -33,13 +33,15 @@ public class ByteBufferPool {
 	
 	public Reference<ByteBuffer> get(int size) {
 		ThreadLocalByteBufferPool pool = getThreadLocalByteBufferPool(size);
-		return pool.get().get();
+		ByteBufferQueue queue = pool.get();
+		return queue.get();
 	}
 	
 	public void put(Reference<ByteBuffer> ref) {
 		ByteBuffer buf = ref.get();
 		ThreadLocalByteBufferPool pool = getThreadLocalByteBufferPool(buf.capacity());
-		pool.get().put(ref);
+		ByteBufferQueue queue = pool.get();
+		queue.put(ref);
 	}
 	
 	private ThreadLocalByteBufferPool getThreadLocalByteBufferPool(int size) {

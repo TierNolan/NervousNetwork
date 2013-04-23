@@ -38,7 +38,7 @@ public class ByteBufferPoolTest {
 	}
 	
 	@Test
-	public void testCache() {
+	public void testQueue() {
 		
 		int depth = 4;
 		
