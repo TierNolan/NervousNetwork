@@ -8,8 +8,6 @@ public interface Handler<T extends Packet> extends ProtocolComponent {
 	/**
 	 * Handles a packet.
 	 * 
-	 * Packets for a given connection are handled serially.
-	 * 
 	 * @param connection the connection
 	 * @param packet the packet
 	 */
