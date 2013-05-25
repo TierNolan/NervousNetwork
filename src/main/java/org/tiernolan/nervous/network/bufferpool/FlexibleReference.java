@@ -12,7 +12,7 @@ public class FlexibleReference<T> extends SoftReference<T> {
 	}
 	
 	public boolean setHard() {
-		hardReference = get();
+		hardReference = super.get();
 		return hardReference != null;
 	}
 	
