@@ -58,6 +58,10 @@ public class TestProtocol implements Protocol {
 					buf.putShort((short) packet.getType());
 					buf.putInt((Integer) packet.getData());
 				}
+
+				public int getPacketBodySize(GenericPacket packet) {
+					return 4;
+				}
 			},
 			new Encoder<GenericPacket>() {
 
@@ -70,7 +74,11 @@ public class TestProtocol implements Protocol {
 					buf.putShort((short) packet.getType());
 					buf.putLong((Long) packet.getData());
 				}
-			},
+
+				public int getPacketBodySize(GenericPacket packet) {
+					return 8;
+				}
+			}
 	};
 
 	public int getPacketHeaderSize() {

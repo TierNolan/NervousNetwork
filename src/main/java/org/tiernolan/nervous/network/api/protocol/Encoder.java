@@ -13,4 +13,12 @@ public interface Encoder<T extends Packet> extends ProtocolComponent {
 	 */
 	public void encode(T packet, ByteBuffer buf);
 	
+	/**
+	 * Gets the packet body size
+	 * 
+	 * @param packet
+	 * @return
+	 */
+	public int getPacketBodySize(T packet);
+	
 }

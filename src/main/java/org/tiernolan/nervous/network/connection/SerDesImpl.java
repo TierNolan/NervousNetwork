@@ -128,14 +128,15 @@ public class SerDesImpl implements Serdes {
 						return i;
 					}
 				}
-				int size = protocol.getPacketHeaderSize() + protocol.getPacketBodySize(p);
-				writeRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(size);
-				write = writeRef.get();
 				@SuppressWarnings("unchecked")
 				Encoder<Packet> e = (Encoder<Packet>) protocol.getPacketEncoder(p);
 				if (e == null) {
 					throw new IOException("No encoder found for packet");
 				}
+				int size = protocol.getPacketHeaderSize() + e.getPacketBodySize(p);
+				writeRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(size);
+				write = writeRef.get();
+
 				e.encode(p, write);
 				write.flip();
 			}

@@ -37,14 +37,6 @@ public interface Protocol {
 	public int getPacketBodySize(ByteBuffer header);
 	
 	/**
-	 * Gets the packet body size from a packet.
-	 * 
-	 * @param packet the packet
-	 * @return the packet size
-	 */
-	public int getPacketBodySize(Packet packet);
-	
-	/**
 	 * Get the packet decoder from a packet header.
 	 * 
 	 * @param header a ByteBuffer containing the packet header
