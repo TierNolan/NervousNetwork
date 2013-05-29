@@ -18,7 +18,7 @@ public class StripedQueueTest {
 	@Test
 	public void testStripes() throws InterruptedException {
 		
-		StripedQueue<StripedObject> q = new StripedQueue<StripedObject>();
+		StripedQueueImpl<StripedObject> q = new StripedQueueImpl<StripedObject>();
 
 		q.offer(new StripedObject(1, 1));
 
@@ -26,15 +26,15 @@ public class StripedQueueTest {
 
 		q.offer(new StripedObject(3, 2));
 		
-		CompletableStriped<StripedObject> s1 = q.take();
+		Completable<StripedObject> s1 = q.take();
 		
 		assertEquals("Wrong object retrieved", s1.getStriped().getId(), 1);
 
-		CompletableStriped<StripedObject> s3 = q.take();
+		Completable<StripedObject> s3 = q.take();
 		
 		assertEquals("Wrong object retrieved", s3.getStriped().getId(), 3);
 
-		CompletableStriped<StripedObject> s2 = q.poll();
+		Completable<StripedObject> s2 = q.poll();
 		
 		assertNull("No object should have been available, since stripe 1 was not done", s2);
 
@@ -49,7 +49,7 @@ public class StripedQueueTest {
 	@Test
 	public void testAsync() throws InterruptedException {
 		
-		StripedQueue<StripedObject> q = new StripedQueue<StripedObject>();
+		StripedQueueImpl<StripedObject> q = new StripedQueueImpl<StripedObject>();
 
 		q.offer(new StripedObject(1, -1));
 
@@ -57,15 +57,15 @@ public class StripedQueueTest {
 
 		q.offer(new StripedObject(3, -1));
 		
-		CompletableStriped<StripedObject> s1 = q.take();
+		Completable<StripedObject> s1 = q.take();
 		
 		assertEquals("Wrong object retrieved", s1.getStriped().getId(), 1);
 
-		CompletableStriped<StripedObject> s2 = q.take();
+		Completable<StripedObject> s2 = q.take();
 		
 		assertEquals("Wrong object retrieved", s2.getStriped().getId(), 2);
 
-		CompletableStriped<StripedObject> s3 = q.poll();
+		Completable<StripedObject> s3 = q.poll();
 		
 		assertEquals("Wrong object retrieved", s3.getStriped().getId(), 3);
 		
@@ -74,11 +74,11 @@ public class StripedQueueTest {
 	@Test
 	public void randomTest() {
 		
-		StripedQueue<StripedObject> q = new StripedQueue<StripedObject>();
+		StripedQueueImpl<StripedObject> q = new StripedQueueImpl<StripedObject>();
 		
 		int[] lastId = new int[16];
 		
-		ArrayList<CompletableStriped<StripedObject>> retrieved = new ArrayList<CompletableStriped<StripedObject>>();
+		ArrayList<Completable<StripedObject>> retrieved = new ArrayList<Completable<StripedObject>>();
 		
 		HashSet<StripedObject> objects = new HashSet<StripedObject>();
 		
@@ -98,11 +98,11 @@ public class StripedQueueTest {
 			}
 			
 			if (retrieved.size() > 16 || (i >= 1000 && retrieved.size() > 0)) {
-				CompletableStriped<StripedObject> c = retrieved.remove(r.nextInt(retrieved.size()));
+				Completable<StripedObject> c = retrieved.remove(r.nextInt(retrieved.size()));
 				c.done();
 			}
 
-			CompletableStriped<StripedObject> c = q.poll();
+			Completable<StripedObject> c = q.poll();
 			
 			if (c != null) {
 				retrieved.add(c);
@@ -121,7 +121,7 @@ public class StripedQueueTest {
 	@Test
 	public void testBlocking() throws InterruptedException {
 		
-		final StripedQueue<StripedObject> q = new StripedQueue<StripedObject>();
+		final StripedQueueImpl<StripedObject> q = new StripedQueueImpl<StripedObject>();
 
 		q.offer(new StripedObject(1, 1));
 
@@ -129,11 +129,11 @@ public class StripedQueueTest {
 
 		q.offer(new StripedObject(3, 2));
 		
-		CompletableStriped<StripedObject> s1 = q.poll();
+		Completable<StripedObject> s1 = q.poll();
 		
 		assertEquals("Wrong object retrieved", s1.getStriped().getId(), 1);
 		
-		CompletableStriped<StripedObject> s3 = q.poll();
+		Completable<StripedObject> s3 = q.poll();
 		
 		assertEquals("Wrong object retrieved", s3.getStriped().getId(), 3);
 		
@@ -142,7 +142,7 @@ public class StripedQueueTest {
 		Thread t = new Thread(new Runnable() {
 			public void run() {
 				try {
-					CompletableStriped<StripedObject> s2 = q.take();
+					Completable<StripedObject> s2 = q.take();
 					assertEquals("Wrong object retrieved", s2.getStriped().getId(), 2);
 					s2.done();
 				} catch (Throwable e) {
@@ -168,7 +168,7 @@ public class StripedQueueTest {
 		t = new Thread(new Runnable() {
 			public void run() {
 				try {
-					CompletableStriped<StripedObject> s4 = q.take();
+					Completable<StripedObject> s4 = q.take();
 					assertEquals("Wrong object retrieved", s4.getStriped().getId(), 4);
 				} catch (Throwable e) {
 					asyncException.set(e);

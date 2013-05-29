@@ -12,7 +12,7 @@ public interface Network {
 	/**
 	 * Sets the write request flag
 	 * 
-	 * @return true if the flag was cleared
+	 * @return true if the flag was set
 	 */
 	public boolean setWriteRequest();
 	

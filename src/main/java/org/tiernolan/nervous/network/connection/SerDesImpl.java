@@ -14,13 +14,14 @@ import org.tiernolan.nervous.network.api.protocol.Decoder;
 import org.tiernolan.nervous.network.api.protocol.Encoder;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
+import org.tiernolan.nervous.network.queue.StripedQueue;
 
 public class SerDesImpl implements Serdes {
 	
 	private final NetworkManager manager;
 	private final Protocol protocol;
 	private final Network network;
-	private final Queue<Packet> handlerQueue;
+	private final StripedQueue<Packet> handlerQueue;
 	private final ConcurrentLinkedQueue<Packet> writeQueue = new ConcurrentLinkedQueue<Packet>();
 	
 	private Reference<ByteBuffer> headerRef;
@@ -33,7 +34,7 @@ public class SerDesImpl implements Serdes {
 	private boolean readingHeader;
 	private boolean seeking;
 
-	public SerDesImpl(NetworkManager manager, Network network, Queue<Packet> handlerQueue) {
+	public SerDesImpl(NetworkManager manager, Network network, StripedQueue<Packet> handlerQueue) {
 		this.manager = manager;
 		this.protocol = manager.getProtocol();
 		this.readingHeader = false;
@@ -98,7 +99,7 @@ public class SerDesImpl implements Serdes {
 					if (p == null) {
 						throw new IOException("Decoding failed for packet");
 					}
-					handlerQueue.add(p);
+					handlerQueue.offer(p);
 					((NetworkManagerImpl) manager).getByteBufferPool().put(bodyRef);
 					((NetworkManagerImpl) manager).getByteBufferPool().put(headerRef);
 					body = null;

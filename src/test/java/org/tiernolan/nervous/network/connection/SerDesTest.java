@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Random;
 
 import org.junit.Test;
@@ -14,6 +13,8 @@ import org.tiernolan.nervous.network.api.NetworkManager;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
 import org.tiernolan.nervous.network.connection.TestProtocol.GenericPacket;
+import org.tiernolan.nervous.network.queue.Completable;
+import org.tiernolan.nervous.network.queue.StripedQueue;
 
 public class SerDesTest  {
 	
@@ -26,7 +27,7 @@ public class SerDesTest  {
 		
 		TestNetwork network = new TestNetwork();
 		
-		Queue<Packet> queue = new LinkedList<Packet>();
+		StripedQueue<Packet> queue = new SimpleStripedQueue();
 		
 		Serdes serdes = new SerDesImpl(manager, network, queue);
 		
@@ -36,7 +37,7 @@ public class SerDesTest  {
 	
 		serdes.read(channel);
 		
-		Packet p = queue.poll();
+		Packet p = queue.poll().getStriped();
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 7);		
 	}
@@ -50,7 +51,7 @@ public class SerDesTest  {
 		
 		TestNetwork network = new TestNetwork();
 		
-		Queue<Packet> queue = new LinkedList<Packet>();
+		StripedQueue<Packet> queue = new SimpleStripedQueue();
 		
 		Serdes serdes = new SerDesImpl(manager, network, queue);
 		
@@ -71,17 +72,17 @@ public class SerDesTest  {
 
 		serdes.read(channel);
 		
-		Packet p = queue.poll();
+		Packet p = queue.poll().getStriped();
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 7);		
 		
-		p = queue.poll();
+		p = queue.poll().getStriped();
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 1234567);
 		
-		p = queue.poll();
+		Completable<Packet> completable = queue.poll();
 		
-		assertTrue("Unexpected packet decoded", p == null);
+		assertTrue("Unexpected packet decoded", completable == null);
 
 	}
 	
@@ -93,7 +94,7 @@ public class SerDesTest  {
 
 		TestNetwork network = new TestNetwork();
 
-		Queue<Packet> queue = new LinkedList<Packet>();
+		StripedQueue<Packet> queue = new SimpleStripedQueue();
 
 		Serdes serdes = new SerDesImpl(manager, network, queue);
 
@@ -112,7 +113,7 @@ public class SerDesTest  {
 		serdes.read(channel);
 		
 		for (int i = 0; i < values.length; i++) {
-			GenericPacket p = (GenericPacket) queue.poll();
+			Packet p = (Packet) queue.poll().getStriped();
 			assertEquals("Packet decode failure", ((GenericPacket) p).getData(), values[i]);
 		}
 		
@@ -128,7 +129,7 @@ public class SerDesTest  {
 
 		TestNetwork network = new TestNetwork();
 
-		Queue<Packet> queue = new LinkedList<Packet>();
+		StripedQueue<Packet> queue = new SimpleStripedQueue();
 
 		Serdes serdes = new SerDesImpl(manager, network, queue);
 		
@@ -168,7 +169,7 @@ public class SerDesTest  {
 
 		TestNetwork network = new TestNetwork();
 
-		Queue<Packet> queue = new LinkedList<Packet>();
+		StripedQueue<Packet> queue = new SimpleStripedQueue();
 
 		Serdes serdesEncoder = new SerDesImpl(manager, network, null);
 		
@@ -202,7 +203,7 @@ public class SerDesTest  {
 		}
 		
 		while (!queue.isEmpty()) {
-			GenericPacket p = (GenericPacket) queue.poll();
+			GenericPacket p = (GenericPacket) queue.poll().getStriped();
 			if (p.getData() instanceof Long) {
 				assertEquals("Packet type and data mismatch", p.getType(), 1);
 				assertEquals("Packet contains wrong data", p.getData(), longList.poll());
@@ -257,6 +258,60 @@ public class SerDesTest  {
 				return data;
 			}
 		};
+	}
+	
+	private class SimpleStripedQueue implements StripedQueue<Packet> {
+		
+		private LinkedList<Packet> queue = new LinkedList<Packet>();
+
+		public boolean offer(Packet p) {
+			return queue.offer(p);
+		}
+
+		public Packet peek() {
+			return queue.peek();
+		}
+
+		public Completable<Packet> poll() {
+			Packet p = queue.poll();
+			if (p == null) {
+				return null;
+			}
+			return new SimpleCompletableStriped(p);
+		}
+
+		public Completable<Packet> take() throws InterruptedException {
+			Packet p = queue.poll();
+			if (p == null) {
+				throw new IllegalStateException("Attempt made to take packet when queue was empty");
+			}
+			return new SimpleCompletableStriped(p);		}
+
+		public boolean isEmpty() {
+			return queue.isEmpty();
+		}
+		
+	}
+	
+	private class SimpleCompletableStriped implements Completable<Packet> {
+		
+		private final Packet packet;
+		
+		public SimpleCompletableStriped(Packet packet) {
+			this.packet = packet;
+		}
+
+		public int getStripeId() {
+			return packet.getStripeId();
+		}
+
+		public void done() {
+		}
+
+		public Packet getStriped() {
+			return packet;
+		}
+		
 	}
 
 }
