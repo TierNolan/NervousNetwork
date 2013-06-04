@@ -47,7 +47,7 @@ public class FIFOChannel implements ByteChannel {
 	}
 	
 	public Integer read() {
-		Byte b = fifo.remove();
+		Byte b = fifo.poll();
 		if (b == null) {
 			return null;
 		}

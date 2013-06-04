@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.lang.ref.Reference;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.tiernolan.nervous.network.NetworkManagerImpl;
@@ -16,13 +16,24 @@ import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
-public class SerDesImpl implements Serdes {
+public class SerdesImpl implements Serdes {
+	
+	private final static Packet shutdownPacket = new Packet() {
+		public Protocol getProtocol() {
+			return null;
+		}
+		public int getStripeId() {
+			return 0;
+		}
+	};
 	
 	private final NetworkManager manager;
 	private final Protocol protocol;
 	private final Network network;
 	private final StripedQueue<Packet> handlerQueue;
 	private final ConcurrentLinkedQueue<Packet> writeQueue = new ConcurrentLinkedQueue<Packet>();
+	
+	private boolean shutdown = false;
 	
 	private Reference<ByteBuffer> headerRef;
 	private ByteBuffer header;
@@ -34,7 +45,7 @@ public class SerDesImpl implements Serdes {
 	private boolean readingHeader;
 	private boolean seeking;
 
-	public SerDesImpl(NetworkManager manager, Network network, StripedQueue<Packet> handlerQueue) {
+	public SerdesImpl(NetworkManager manager, Network network, StripedQueue<Packet> handlerQueue) {
 		this.manager = manager;
 		this.protocol = manager.getProtocol();
 		this.readingHeader = false;
@@ -53,15 +64,16 @@ public class SerDesImpl implements Serdes {
 	
 	public int read(ReadableByteChannel channel) throws IOException {
 		int read = 0;
+		int r = 0;
 		while (true) {
 			if (seeking) {
 				if (header == null) {
 					headerRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(protocol.getPacketHeaderSize());
 					header = headerRef.get();
 				}
-				read += channel.read(header);
+				read += Math.max(0, r = channel.read(header));
 				if (header.hasRemaining()) {
-					return read;
+					return (r == -1 && read == 0) ? -1 : read;
 				}
 				int limit = header.limit();
 				header.flip();
@@ -76,9 +88,9 @@ public class SerDesImpl implements Serdes {
 				seeking = false;
 				readingHeader = true;
 			} else if (readingHeader) {
-				read += channel.read(header);
+				read += Math.max(0, r = channel.read(header));
 				if (header.hasRemaining()) {
-					return read;
+					return (r == -1 && read == 0) ? -1 : read;
 				}
 				readingHeader = false;
 				header.flip();
@@ -88,7 +100,7 @@ public class SerDesImpl implements Serdes {
 					bodyRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(size);
 					body = bodyRef.get();
 				}
-				read += channel.read(body);
+				read += Math.max(0, r = channel.read(body));
 				if (!body.hasRemaining()) {
 					body.flip();
 					Decoder<?> decoder = protocol.getPacketDecoder(header);
@@ -108,7 +120,7 @@ public class SerDesImpl implements Serdes {
 					headerRef = null;
 					seeking = true;
 				} else {
-					return read;
+					return (r == -1 && read == 0) ? -1 : read;
 				}
 			}
 		}
@@ -121,13 +133,20 @@ public class SerDesImpl implements Serdes {
 		boolean blocked = false;
 		while (!blocked) {
 			if (write == null) {
-				Packet p = writeQueue.poll();
-				if (p == null) {
+				Packet p;
+				if (shutdown || (p = writeQueue.poll()) == null) {
 					network.clearWriteRequest();
 					p = writeQueue.poll();
-					if (p == null) {
+					if (shutdown || p == null) {
 						return i;
 					}
+				}
+				if (p == shutdownPacket) {
+					shutdown = true;
+					if (channel instanceof SocketChannel) {
+						network.close();
+					}
+					continue;
 				}
 				@SuppressWarnings("unchecked")
 				Encoder<Packet> e = (Encoder<Packet>) protocol.getPacketEncoder(p);
@@ -137,7 +156,6 @@ public class SerDesImpl implements Serdes {
 				int size = protocol.getPacketHeaderSize() + e.getPacketBodySize(p);
 				writeRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(size);
 				write = writeRef.get();
-
 				e.encode(p, write);
 				write.flip();
 			}
@@ -159,6 +177,10 @@ public class SerDesImpl implements Serdes {
 	public void writePacket(Packet p) {
 		writeQueue.add(p);
 		network.setWriteRequest();
+	}
+
+	public void shutdown() {
+		writePacket(shutdownPacket);
 	}
 
 }

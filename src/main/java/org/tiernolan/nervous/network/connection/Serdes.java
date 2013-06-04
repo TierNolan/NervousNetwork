@@ -29,10 +29,15 @@ public interface Serdes extends ProtocolComponent, NetworkComponent{
 	public int write(WritableByteChannel channel) throws IOException;
 	
 	/**
-	 * Writes a packet to the network
+	 * Writes a packet to the Network
 	 * 
 	 * @param p
 	 */
 	public void writePacket(Packet p);
+	
+	/**
+	 * Shuts down the channel cleanly
+	 */
+	public void shutdown();
 	
 }

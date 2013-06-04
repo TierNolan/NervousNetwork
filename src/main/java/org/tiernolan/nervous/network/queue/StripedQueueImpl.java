@@ -6,9 +6,9 @@ import java.util.LinkedList;
 import org.tiernolan.nervous.network.api.queue.Striped;
 
 
-public class StripedQueueImpl<T extends Striped>  {
+public class StripedQueueImpl<T extends Striped> implements StripedQueue<T> {
 	
-	private final HashMap<Integer, LinkedList<Completable<T>>> stripes = new  HashMap<Integer, LinkedList<Completable<T>>>();
+	private final HashMap<Integer, LinkedList<Completable<T>>> stripes = new HashMap<Integer, LinkedList<Completable<T>>>();
 	
 	private final LinkedList<Completable<T>> asyncQueue = new LinkedList<Completable<T>>();
 	private final LinkedList<LinkedList<Completable<T>>> queueQueue = new LinkedList<LinkedList<Completable<T>>>();

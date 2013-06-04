@@ -156,6 +156,17 @@ public class TestProtocol implements Protocol {
 		public int getStripeId() {
 			return 0;
 		}
+		
+		public String toString() {
+			Object data = getData();
+			if (data instanceof Integer) {
+				return Integer.toHexString((Integer) data);
+			} else if (data instanceof Long) {
+				return Long.toHexString((Long) data);
+			} else {
+				return data.toString();
+			}
+		}
 	}
 	
 }

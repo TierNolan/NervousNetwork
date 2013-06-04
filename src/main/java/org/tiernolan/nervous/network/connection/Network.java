@@ -1,19 +1,25 @@
 package org.tiernolan.nervous.network.connection;
 
+
 public interface Network {
 
 	/**
-	 * Clears the write request flag
+	 * Clears the write request flag. 
 	 * 
-	 * @return true if the flag was cleared
+	 * This method should only be called by the Serdes.write(WritableByteChannel channel) method
 	 */
-	public boolean clearWriteRequest();
+	public void clearWriteRequest();
 	
 	/**
-	 * Sets the write request flag
+	 * Sets the write request flag.
 	 * 
-	 * @return true if the flag was set
+	 * This method may be called by any thread
 	 */
-	public boolean setWriteRequest();
+	public void setWriteRequest();
+	
+	/**
+	 * Closes the network connection
+	 */
+	public void close();
 	
 }
