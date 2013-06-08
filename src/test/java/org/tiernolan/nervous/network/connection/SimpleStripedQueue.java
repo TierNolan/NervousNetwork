@@ -11,7 +11,6 @@ public class SimpleStripedQueue implements StripedQueue<Packet> {
 	private LinkedList<Packet> queue = new LinkedList<Packet>();
 
 	public boolean offer(Packet p) {
-		System.out.println("Offering to " + this);
 		return queue.offer(p);
 	}
 
@@ -28,7 +27,6 @@ public class SimpleStripedQueue implements StripedQueue<Packet> {
 	}
 
 	public Completable<Packet> take() throws InterruptedException {
-		System.out.println("Taking from " + this);
 		Packet p = queue.poll();
 		if (p == null) {
 			throw new IllegalStateException("Attempt made to take packet when queue was empty");
