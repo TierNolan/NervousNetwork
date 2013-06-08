@@ -73,11 +73,9 @@ public class SelectorHandler extends Thread {
 						}
 						if (key.isReadable()) {
 							ChannelHandler channelHandler = (ChannelHandler) key.attachment();
-							key.interestOps(0);
 							manager.getExecutorService().submit(channelHandler.getReadRunnable());
 						} else if (key.isWritable()) {
 							ChannelHandler channelHandler = (ChannelHandler) key.attachment();
-							key.interestOps(0);
 							manager.getExecutorService().submit(channelHandler.getWriteRunnable());
 						}
 					}

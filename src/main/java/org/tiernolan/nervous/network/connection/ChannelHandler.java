@@ -6,6 +6,7 @@ import java.nio.channels.SocketChannel;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.tiernolan.nervous.network.api.NetworkManager;
 import org.tiernolan.nervous.network.api.protocol.Packet;
@@ -25,6 +26,8 @@ public class ChannelHandler implements Network {
 	private final AtomicBoolean writePending = new AtomicBoolean(false);
 	private final AtomicBoolean closePending = new AtomicBoolean(false);
 	private final AtomicBoolean syncPending = new AtomicBoolean(false);
+	private final AtomicReference<HandlerState> inProgress = new AtomicReference<HandlerState>(HandlerState.IDLE);
+	
 	private boolean write = false;
 	
 	private final Runnable readRunnable;
@@ -38,6 +41,9 @@ public class ChannelHandler implements Network {
 				} catch (IOException e) {
 					close();
 				} finally {
+					if (!inProgress.compareAndSet(HandlerState.RUNNING, HandlerState.IDLE)) {
+						throw new IllegalStateException("Channel Handler was not in RUNNING state");
+					}
 					restoreOps();
 				}
 			}
@@ -49,6 +55,9 @@ public class ChannelHandler implements Network {
 				} catch (IOException e) {
 					close();
 				} finally {
+					if (!inProgress.compareAndSet(HandlerState.RUNNING, HandlerState.IDLE)) {
+						throw new IllegalStateException("Channel Handler was not in RUNNING state");
+					}
 					restoreOps();
 				}
 			}
@@ -77,7 +86,9 @@ public class ChannelHandler implements Network {
 
 	public void setWriteRequest() {
 		if (writePending.compareAndSet(false, true)) {
-			queueForSync();
+			if (inProgress.compareAndSet(HandlerState.IDLE, HandlerState.WRITE_PENDING)) {
+				queueForSync();
+			}
 		}
 	}
 	
@@ -113,23 +124,25 @@ public class ChannelHandler implements Network {
 		}
 
 	}
-	
+
 	public void queueForSync() {
 		if (syncPending.compareAndSet(false, true)) {
 			selectorHandler.queueForSync(this);
 		}
 	}
-	
+
 	public void sync() {
 		if (!syncPending.compareAndSet(true, false)) {
 			throw new IllegalStateException("Sync flag was false when syncing");
 		}
-		restoreOps();
+		if (inProgress.compareAndSet(HandlerState.WRITE_PENDING, HandlerState.IDLE)) {
+			restoreOps();
+		}
 		if (closePending.get()) {
 			close();
 		}
 	}
-	
+
 	private void restoreOps() {
 		if (writePending.compareAndSet(true, false)) {
 			write = true;
@@ -142,11 +155,20 @@ public class ChannelHandler implements Network {
 	}
 
 	public Runnable getReadRunnable() {
+		setInProgress();
 		return readRunnable;
 	}
 	
 	public Runnable getWriteRunnable() {
+		setInProgress();
 		return writeRunnable;
+	}
+	
+	private void setInProgress() {
+		if (!inProgress.compareAndSet(HandlerState.IDLE, HandlerState.RUNNING) && !inProgress.compareAndSet(HandlerState.WRITE_PENDING, HandlerState.RUNNING)) {
+			throw new IllegalStateException("Channel Handler was not in IDLE or WRITE_PENDING state");
+		}
+		key.interestOps(0);
 	}
 	
 	protected Serdes getSerdes() {
@@ -161,6 +183,10 @@ public class ChannelHandler implements Network {
 	@Override
 	public int hashCode() {
 		return hash;
+	}
+	
+	private static enum HandlerState {
+		IDLE, WRITE_PENDING, RUNNING;
 	}
 
 }

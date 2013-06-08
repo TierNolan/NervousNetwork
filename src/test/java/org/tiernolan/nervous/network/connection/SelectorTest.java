@@ -246,7 +246,7 @@ public class SelectorTest {
 
 		Random r = new Random();
 		
-		Object[] values = new Object[50];
+		Object[] values = new Object[500];
 		
 		for (int i = 0; i < values.length; i++) {
 			Object data;
