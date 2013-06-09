@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 import java.util.LinkedList;
 
-public class FIFOChannel implements ByteChannel {
+public class SimpleFIFOChannel implements ByteChannel {
 	
 	private final LinkedList<Byte> fifo = new LinkedList<Byte>();
 

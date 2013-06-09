@@ -13,7 +13,7 @@ import org.tiernolan.nervous.network.NetworkManagerImpl;
 import org.tiernolan.nervous.network.api.NetworkManager;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
-import org.tiernolan.nervous.network.connection.TestProtocol.GenericPacket;
+import org.tiernolan.nervous.network.connection.SimpleProtocol.GenericPacket;
 import org.tiernolan.nervous.network.queue.Completable;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
@@ -22,17 +22,17 @@ public class SerDesTest  {
 	@Test
 	public void decodeTest() throws IOException {
 		
-		Protocol protocol = new TestProtocol();
+		Protocol protocol = new SimpleProtocol();
 		
 		NetworkManager manager = new NetworkManagerImpl(protocol);
 		
-		TestNetwork network = new TestNetwork();
+		SimpleNetwork network = new SimpleNetwork();
 		
 		StripedQueue<Packet> queue = new SimpleStripedQueue();
 		
 		Serdes serdes = new SerdesImpl(manager, network, queue);
 		
-		FIFOChannel channel = new FIFOChannel();
+		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 		
 		writeIntPacket(channel, 7);
 	
@@ -47,17 +47,17 @@ public class SerDesTest  {
 	@Test
 	public void seekTest() throws IOException {
 		
-		Protocol protocol = new TestProtocol();
+		Protocol protocol = new SimpleProtocol();
 		
 		NetworkManager manager = new NetworkManagerImpl(protocol);
 		
-		TestNetwork network = new TestNetwork();
+		SimpleNetwork network = new SimpleNetwork();
 		
 		StripedQueue<Packet> queue = new SimpleStripedQueue();
 		
 		Serdes serdes = new SerdesImpl(manager, network, queue);
 		
-		FIFOChannel channel = new FIFOChannel();
+		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 		
 		writeIntPacket(channel, 7);
 
@@ -90,17 +90,17 @@ public class SerDesTest  {
 	
 	@Test
 	public void randomDecodeTest() throws IOException {
-		Protocol protocol = new TestProtocol();
+		Protocol protocol = new SimpleProtocol();
 
 		NetworkManager manager = new NetworkManagerImpl(protocol);
 
-		TestNetwork network = new TestNetwork();
+		SimpleNetwork network = new SimpleNetwork();
 
 		StripedQueue<Packet> queue = new SimpleStripedQueue();
 
 		Serdes serdes = new SerdesImpl(manager, network, queue);
 
-		FIFOChannel channel = new FIFOChannel();
+		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 
 		Random r = new Random();
 		
@@ -125,17 +125,17 @@ public class SerDesTest  {
 	@Test
 	public void encodeTest() throws IOException {
 		
-		TestProtocol protocol = new TestProtocol();
+		SimpleProtocol protocol = new SimpleProtocol();
 
 		NetworkManager manager = new NetworkManagerImpl(protocol);
 
-		TestNetwork network = new TestNetwork();
+		SimpleNetwork network = new SimpleNetwork();
 
 		StripedQueue<Packet> queue = new SimpleStripedQueue();
 
 		Serdes serdes = new SerdesImpl(manager, network, queue);
 		
-		FIFOChannel channel = new FIFOChannel();
+		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 
 		GenericPacket p = getPacket(7, protocol);
 		
@@ -179,11 +179,11 @@ public class SerDesTest  {
 	
 	@Test
 	public void passthroughTest() throws IOException {
-		TestProtocol protocol = new TestProtocol();
+		SimpleProtocol protocol = new SimpleProtocol();
 
 		NetworkManager manager = new NetworkManagerImpl(protocol);
 
-		TestNetwork network = new TestNetwork();
+		SimpleNetwork network = new SimpleNetwork();
 
 		StripedQueue<Packet> queue = new SimpleStripedQueue();
 
@@ -191,7 +191,7 @@ public class SerDesTest  {
 		
 		Serdes serdesDecoder = new SerdesImpl(manager, null, queue);
 
-		FIFOChannel channel = new FIFOChannel();
+		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 		
 		LinkedList<Long> longList = new LinkedList<Long>();
 
@@ -230,15 +230,15 @@ public class SerDesTest  {
 		}
 	}
 
-	private void writeIntPacket(FIFOChannel channel, int i) {
+	private void writeIntPacket(SimpleFIFOChannel channel, int i) {
 		channel.write(0xAA, 0x55, 0x00, 0x00, i >> 24, i >> 16, i >> 8, i);
 	}
 	
-	private void writeLongPacket(FIFOChannel channel, long l) {
+	private void writeLongPacket(SimpleFIFOChannel channel, long l) {
 		channel.write(0xAAL, 0x55L, 0x00L, 0x01L, l >> 56, l >> 48, l >> 40, l >> 32, l >> 24, l >> 16, l >> 8, l);
 	}
 	
-	public void checkIntPacket(FIFOChannel channel, int i) {
+	public void checkIntPacket(SimpleFIFOChannel channel, int i) {
 		assertEquals("Packet header encode error", (byte)(int) channel.read(), (byte) 0xAA);
 		assertEquals("Packet header encode error", (byte)(int) channel.read(), (byte) 0x55);
 		assertEquals("Packet header encode error", (byte)(int) channel.read(), (byte) 0x00);
@@ -250,7 +250,7 @@ public class SerDesTest  {
 		assertEquals("Packet data encode error", (byte)(int) channel.read(), (byte) ((i >> 0) & 0xFF));
 	}
 	
-	public void checkLongPacket(FIFOChannel channel, long l) {
+	public void checkLongPacket(SimpleFIFOChannel channel, long l) {
 		assertEquals("Packet header encode error", (byte)(int) channel.read(), (byte) 0xAA);
 		assertEquals("Packet header encode error", (byte)(int) channel.read(), (byte) 0x55);
 		assertEquals("Packet header encode error", (byte)(int) channel.read(), (byte) 0x00);
@@ -266,7 +266,7 @@ public class SerDesTest  {
 		assertEquals("Packet data encode error", (byte)(int) channel.read(), (byte) ((l >> 0) & 0xFF));
 	}
 	
-	public GenericPacket getPacket(final Object data, TestProtocol protocol) {
+	public GenericPacket getPacket(final Object data, SimpleProtocol protocol) {
 		int type = (data instanceof Long) ? 1 : 0;
 		return protocol.new GenericPacket(type) {
 			@Override

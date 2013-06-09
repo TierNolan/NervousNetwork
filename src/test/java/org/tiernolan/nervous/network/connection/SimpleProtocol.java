@@ -8,14 +8,14 @@ import org.tiernolan.nervous.network.api.protocol.Handler;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
 
-public class TestProtocol implements Protocol {
+public class SimpleProtocol implements Protocol {
 	
 	private final int[] bodySizes = new int[] {4, 8}; 
 	private final Decoder<?>[] decoders = new Decoder[] {
 			new Decoder<GenericPacket>() {
 
 				public Protocol getProtocol() {
-					return TestProtocol.this;
+					return SimpleProtocol.this;
 				}
 
 				public GenericPacket decode(ByteBuffer header, ByteBuffer body) {
@@ -31,7 +31,7 @@ public class TestProtocol implements Protocol {
 			new Decoder<GenericPacket>() {
 
 				public Protocol getProtocol() {
-					return TestProtocol.this;
+					return SimpleProtocol.this;
 				}
 
 				public GenericPacket decode(ByteBuffer header, ByteBuffer body) {
@@ -50,7 +50,7 @@ public class TestProtocol implements Protocol {
 			new Encoder<GenericPacket>() {
 
 				public Protocol getProtocol() {
-					return TestProtocol.this;
+					return SimpleProtocol.this;
 				}
 
 				public void encode(GenericPacket packet, ByteBuffer buf) {
@@ -66,7 +66,7 @@ public class TestProtocol implements Protocol {
 			new Encoder<GenericPacket>() {
 
 				public Protocol getProtocol() {
-					return TestProtocol.this;
+					return SimpleProtocol.this;
 				}
 
 				public void encode(GenericPacket packet, ByteBuffer buf) {
@@ -150,7 +150,7 @@ public class TestProtocol implements Protocol {
 		public abstract Object getData();
 
 		public Protocol getProtocol() {
-			return TestProtocol.this;
+			return SimpleProtocol.this;
 		}
 
 		public int getStripeId() {
