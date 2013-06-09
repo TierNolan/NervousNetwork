@@ -31,7 +31,8 @@ public class SimpleStripedQueue implements StripedQueue<Packet> {
 		if (p == null) {
 			throw new IllegalStateException("Attempt made to take packet when queue was empty");
 		}
-		return new SimpleCompletableStriped(p);		}
+		return new SimpleCompletableStriped(p);		
+	}
 
 	public boolean isEmpty() {
 		return queue.isEmpty();
