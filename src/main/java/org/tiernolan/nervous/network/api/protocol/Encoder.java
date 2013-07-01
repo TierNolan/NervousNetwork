@@ -2,7 +2,9 @@ package org.tiernolan.nervous.network.api.protocol;
 
 import java.nio.ByteBuffer;
 
-public interface Encoder<T extends Packet> extends ProtocolComponent {
+import org.tiernolan.nervous.network.api.connection.Connection;
+
+public interface Encoder<P extends Packet<C>, C extends Connection<C>> extends ProtocolComponent<C> {
 	
 	/**
 	 * Encodes a packet to a header and body
@@ -11,7 +13,7 @@ public interface Encoder<T extends Packet> extends ProtocolComponent {
 	 * @param packet the packet
 	 * @param buf a ByteBuffer for the packet
 	 */
-	public void encode(T packet, ByteBuffer buf);
+	public void encode(P packet, ByteBuffer buf);
 	
 	/**
 	 * Gets the packet body size
@@ -19,6 +21,6 @@ public interface Encoder<T extends Packet> extends ProtocolComponent {
 	 * @param packet
 	 * @return
 	 */
-	public int getPacketBodySize(T packet);
+	public int getPacketBodySize(P packet);
 	
 }

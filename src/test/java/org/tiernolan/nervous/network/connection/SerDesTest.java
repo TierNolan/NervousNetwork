@@ -22,15 +22,15 @@ public class SerDesTest  {
 	@Test
 	public void decodeTest() throws IOException {
 		
-		Protocol protocol = new SimpleProtocol();
+		Protocol<SimpleConnection> protocol = new SimpleProtocol();
 		
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 		
 		SimpleNetwork network = new SimpleNetwork();
 		
-		StripedQueue<Packet> queue = new SimpleStripedQueue();
+		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
 		
-		Serdes serdes = new SerdesImpl(manager, network, queue);
+		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 		
 		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 		
@@ -38,7 +38,7 @@ public class SerDesTest  {
 	
 		serdes.read(channel);
 		
-		Packet p = queue.poll().getStriped();
+		Packet<SimpleConnection> p = queue.poll().getStriped();
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 7);		
 		
@@ -47,15 +47,15 @@ public class SerDesTest  {
 	@Test
 	public void seekTest() throws IOException {
 		
-		Protocol protocol = new SimpleProtocol();
+		Protocol<SimpleConnection> protocol = new SimpleProtocol();
 		
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 		
 		SimpleNetwork network = new SimpleNetwork();
 		
-		StripedQueue<Packet> queue = new SimpleStripedQueue();
+		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
 		
-		Serdes serdes = new SerdesImpl(manager, network, queue);
+		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 		
 		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 		
@@ -74,7 +74,7 @@ public class SerDesTest  {
 
 		serdes.read(channel);
 		
-		Packet p = queue.poll().getStriped();
+		Packet<SimpleConnection> p = queue.poll().getStriped();
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 7);		
 		
@@ -82,7 +82,7 @@ public class SerDesTest  {
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 1234567);
 		
-		Completable<Packet> completable = queue.poll();
+		Completable<Packet<SimpleConnection>> completable = queue.poll();
 		
 		assertTrue("Unexpected packet decoded", completable == null);
 
@@ -90,15 +90,15 @@ public class SerDesTest  {
 	
 	@Test
 	public void randomDecodeTest() throws IOException {
-		Protocol protocol = new SimpleProtocol();
+		Protocol<SimpleConnection> protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
 		SimpleNetwork network = new SimpleNetwork();
 
-		StripedQueue<Packet> queue = new SimpleStripedQueue();
+		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
 
-		Serdes serdes = new SerdesImpl(manager, network, queue);
+		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 
 		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 
@@ -115,7 +115,7 @@ public class SerDesTest  {
 		serdes.read(channel);
 		
 		for (int i = 0; i < values.length; i++) {
-			Packet p = (Packet) queue.poll().getStriped();
+			Packet<SimpleConnection> p = (Packet<SimpleConnection>) queue.poll().getStriped();
 			assertEquals("Packet decode failure", ((GenericPacket) p).getData(), values[i]);
 		}
 		
@@ -127,13 +127,13 @@ public class SerDesTest  {
 		
 		SimpleProtocol protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
 		SimpleNetwork network = new SimpleNetwork();
 
-		StripedQueue<Packet> queue = new SimpleStripedQueue();
+		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
 
-		Serdes serdes = new SerdesImpl(manager, network, queue);
+		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 		
 		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 
@@ -181,15 +181,15 @@ public class SerDesTest  {
 	public void passthroughTest() throws IOException {
 		SimpleProtocol protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
 		SimpleNetwork network = new SimpleNetwork();
 
-		StripedQueue<Packet> queue = new SimpleStripedQueue();
+		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
 
-		Serdes serdesEncoder = new SerdesImpl(manager, network, null);
+		Serdes<SimpleConnection> serdesEncoder = new SerdesImpl<SimpleConnection>(manager, network, null);
 		
-		Serdes serdesDecoder = new SerdesImpl(manager, null, queue);
+		Serdes<SimpleConnection> serdesDecoder = new SerdesImpl<SimpleConnection>(manager, null, queue);
 
 		SimpleFIFOChannel channel = new SimpleFIFOChannel();
 		
@@ -234,6 +234,7 @@ public class SerDesTest  {
 		channel.write(0xAA, 0x55, 0x00, 0x00, i >> 24, i >> 16, i >> 8, i);
 	}
 	
+	@SuppressWarnings("unused")
 	private void writeLongPacket(SimpleFIFOChannel channel, long l) {
 		channel.write(0xAAL, 0x55L, 0x00L, 0x01L, l >> 56, l >> 48, l >> 40, l >> 32, l >> 24, l >> 16, l >> 8, l);
 	}

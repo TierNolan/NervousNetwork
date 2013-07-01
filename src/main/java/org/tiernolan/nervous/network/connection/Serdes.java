@@ -4,11 +4,12 @@ import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-import org.tiernolan.nervous.network.api.NetworkComponent;
-import org.tiernolan.nervous.network.api.protocol.Packet;
+import org.tiernolan.nervous.network.api.NetworkManagerComponent;
+import org.tiernolan.nervous.network.api.connection.Connection;
+import org.tiernolan.nervous.network.api.connection.Network;
 import org.tiernolan.nervous.network.api.protocol.ProtocolComponent;
 
-public interface Serdes extends ProtocolComponent, NetworkComponent{
+public interface Serdes<C extends Connection<C>> extends Network<C>, ProtocolComponent<C>, NetworkManagerComponent<C> {
 
 	/**
 	 * Called by the Network when new data arrives.  The ByteStream is converted into Packets
@@ -27,17 +28,5 @@ public interface Serdes extends ProtocolComponent, NetworkComponent{
 	 * @throws IOException
 	 */
 	public int write(WritableByteChannel channel) throws IOException;
-	
-	/**
-	 * Writes a packet to the Network
-	 * 
-	 * @param p
-	 */
-	public void writePacket(Packet p);
-	
-	/**
-	 * Shuts down the channel cleanly
-	 */
-	public void shutdown();
 	
 }

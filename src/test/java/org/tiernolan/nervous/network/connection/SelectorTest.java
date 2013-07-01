@@ -30,11 +30,11 @@ public class SelectorTest {
 		
 		SimpleProtocol protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet> queue = new StripedQueueImpl<Packet>();
+		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
 		
-		SelectorHandler selectorHandler = new SelectorHandler(manager);
+		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
 		selectorHandler.start();
 		
@@ -51,7 +51,7 @@ public class SelectorTest {
 		
 		writeIntPacket(out, 42);
 		
-		Packet p = queue.take().getStriped();
+		Packet<SimpleConnection> p = queue.take().getStriped();
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 42);
 		
@@ -73,11 +73,11 @@ public class SelectorTest {
 		
 		SimpleProtocol protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet> queue = new StripedQueueImpl<Packet>();
+		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
 		
-		SelectorHandler selectorHandler = new SelectorHandler(manager);
+		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
 		selectorHandler.start();
 		
@@ -90,9 +90,9 @@ public class SelectorTest {
 		
 		SocketChannel in = server.accept();
 		
-		ChannelHandler handler = selectorHandler.addChannel(in, queue);
+		ChannelHandler<SimpleConnection> handler = selectorHandler.addChannel(in, queue);
 
-		Serdes serdes = handler.getSerdes();
+		Serdes<SimpleConnection> serdes = handler.getSerdes();
 		
 		GenericPacket p = getPacket(7, protocol);
 
@@ -117,11 +117,11 @@ public class SelectorTest {
 	public void shutdown() throws IOException, InterruptedException {
 		SimpleProtocol protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet> queue = new StripedQueueImpl<Packet>();
+		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
 		
-		SelectorHandler selectorHandler = new SelectorHandler(manager);
+		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
 		selectorHandler.start();
 		
@@ -134,9 +134,9 @@ public class SelectorTest {
 		
 		SocketChannel in = server.accept();
 		
-		ChannelHandler handler = selectorHandler.addChannel(in, queue);
+		ChannelHandler<SimpleConnection> handler = selectorHandler.addChannel(in, queue);
 
-		Serdes serdes = handler.getSerdes();
+		Serdes<SimpleConnection> serdes = handler.getSerdes();
 		
 		GenericPacket p = getPacket(7, protocol);
 		
@@ -168,11 +168,11 @@ public class SelectorTest {
 	public void randomDecodeTest() throws IOException, InterruptedException {
 		SimpleProtocol protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet> queue = new StripedQueueImpl<Packet>();
+		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
 		
-		SelectorHandler selectorHandler = new SelectorHandler(manager);
+		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
 		selectorHandler.start();
 		
@@ -198,8 +198,8 @@ public class SelectorTest {
 		}
 		
 		for (int i = 0; i < values.length; i++) {
-			Completable<Packet> c = queue.take();
-			Packet p = (Packet) c.getStriped();
+			Completable<Packet<SimpleConnection>> c = queue.take();
+			Packet<SimpleConnection> p = (Packet<SimpleConnection>) c.getStriped();
 			assertEquals("Packet decode failure", ((GenericPacket) p).getData(), values[i]);
 			c.done();
 		}
@@ -223,11 +223,11 @@ public class SelectorTest {
 	public void randomEncodeTest() throws IOException, InterruptedException {
 		SimpleProtocol protocol = new SimpleProtocol();
 
-		NetworkManager manager = new NetworkManagerImpl(protocol);
+		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet> queue = new StripedQueueImpl<Packet>();
+		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
 		
-		SelectorHandler selectorHandler = new SelectorHandler(manager);
+		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
 		selectorHandler.start();
 		
@@ -240,9 +240,9 @@ public class SelectorTest {
 		
 		SocketChannel in = server.accept();
 		
-		ChannelHandler handler = selectorHandler.addChannel(in, queue);
+		ChannelHandler<SimpleConnection> handler = selectorHandler.addChannel(in, queue);
 		
-		Serdes serdes = handler.getSerdes();
+		Serdes<SimpleConnection> serdes = handler.getSerdes();
 
 		Random r = new Random();
 		
@@ -287,6 +287,7 @@ public class SelectorTest {
 		channelWrite(channel, 0xAA, 0x55, 0x00, 0x00, i >> 24, i >> 16, i >> 8, i);
 	}
 	
+	@SuppressWarnings("unused")
 	private void writeLongPacket(SimpleFIFOChannel channel, long l) throws IOException {
 		channelWrite(channel, 0xAAL, 0x55L, 0x00L, 0x01L, l >> 56, l >> 48, l >> 40, l >> 32, l >> 24, l >> 16, l >> 8, l);
 	}

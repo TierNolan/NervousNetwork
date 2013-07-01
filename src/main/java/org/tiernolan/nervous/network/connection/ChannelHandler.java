@@ -9,16 +9,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.tiernolan.nervous.network.api.NetworkManager;
+import org.tiernolan.nervous.network.api.connection.Connection;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
-public class ChannelHandler implements Network {
+public class ChannelHandler<C extends Connection<C>> implements ChannelControl {
 	
 	private final static AtomicInteger hashCount = new AtomicInteger(0);
 	
-	private final NetworkManager manager;
-	private final Serdes serdes;
-	private final SelectorHandler selectorHandler;
+	@SuppressWarnings("unused")
+	private final NetworkManager<C> manager;
+	private final Serdes<C> serdes;
+	private final SelectorHandler<C> selectorHandler;
 	private final SocketChannel channel;
 	private final int hash;
 	
@@ -33,7 +35,7 @@ public class ChannelHandler implements Network {
 	private final Runnable readRunnable;
 	private final Runnable writeRunnable;
 	
-	public ChannelHandler(final NetworkManager manager, final SocketChannel channel, final SelectorHandler selectorHandler, StripedQueue<Packet> queue) throws IOException {
+	public ChannelHandler(final NetworkManager<C> manager, final SocketChannel channel, final SelectorHandler<C> selectorHandler, StripedQueue<Packet<C>> queue) throws IOException {
 		readRunnable = new Runnable() {
 			public void run() {
 				try {
@@ -62,19 +64,18 @@ public class ChannelHandler implements Network {
 				}
 			}
 		};
-		this.serdes = new SerdesImpl(manager, this, queue);
+		this.serdes = new SerdesImpl<C>(manager, this, queue);
 		this.hash = hashCount.incrementAndGet();
 		this.manager = manager;
 		this.channel = channel;
 		this.selectorHandler = selectorHandler;
-		channel.configureBlocking(false);
 		try {
+			channel.configureBlocking(false);
 			this.key = selectorHandler.register(channel, this);
 			if (key == null) {
 				throw new IOException("SelectorHandler is not running");
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
 			close();
 			throw e;
 		}
@@ -171,7 +172,7 @@ public class ChannelHandler implements Network {
 		key.interestOps(0);
 	}
 	
-	protected Serdes getSerdes() {
+	protected Serdes<C> getSerdes() {
 		return serdes;
 	}
 	

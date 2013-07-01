@@ -13,13 +13,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.tiernolan.nervous.network.NetworkManagerImpl;
 import org.tiernolan.nervous.network.api.NetworkManager;
+import org.tiernolan.nervous.network.api.connection.Connection;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
-public class SelectorHandler extends Thread {
+public class SelectorHandler<C extends Connection<C>> extends Thread {
 
-	private final NetworkManager manager;
+	private final NetworkManager<C> manager;
 
 	private final Selector selector;
 
@@ -30,10 +32,11 @@ public class SelectorHandler extends Thread {
 	
 	private final Timer timer = new Timer();
 	
-	private final ConcurrentLinkedQueue<ChannelHandler> channelHandlerSyncQueue = new ConcurrentLinkedQueue<ChannelHandler>();
-	private final ConcurrentHashMap<ChannelHandler, Boolean> channels = new ConcurrentHashMap<ChannelHandler, Boolean>();
+	private final ConcurrentLinkedQueue<ChannelHandler<C>> channelHandlerSyncQueue = new ConcurrentLinkedQueue<ChannelHandler<C>>();
+	private final ConcurrentHashMap<ChannelHandler<C>, Boolean> channels = new ConcurrentHashMap<ChannelHandler<C>, Boolean>();
 
-	public SelectorHandler(NetworkManager manager) throws IOException {
+	public SelectorHandler(NetworkManager<C> manager) throws IOException {
+		this.setName("SelectorHandler {" + manager + "}");
 		this.selector = SelectorProvider.provider().openSelector();
 		this.manager = manager;
 	}
@@ -57,7 +60,7 @@ public class SelectorHandler extends Thread {
 					manager.getLogger().info("IOException thrown, " + e.getMessage());
 					break;
 				}
-				ChannelHandler h;
+				ChannelHandler<C> h;
 				while ((h = channelHandlerSyncQueue.poll()) != null) {
 					h.sync();
 				}
@@ -72,16 +75,19 @@ public class SelectorHandler extends Thread {
 							continue;
 						}
 						if (key.isReadable()) {
-							ChannelHandler channelHandler = (ChannelHandler) key.attachment();
+							@SuppressWarnings("unchecked")
+							ChannelHandler<C> channelHandler = (ChannelHandler<C>) key.attachment();
 							manager.getExecutorService().submit(channelHandler.getReadRunnable());
 						} else if (key.isWritable()) {
-							ChannelHandler channelHandler = (ChannelHandler) key.attachment();
+							@SuppressWarnings("unchecked")
+							ChannelHandler<C> channelHandler = (ChannelHandler<C>) key.attachment();
 							manager.getExecutorService().submit(channelHandler.getWriteRunnable());
 						}
 					}
 				}
 			}
 		} finally {
+			closeSelector();
 			timer.cancel();
 		}
 	}
@@ -109,7 +115,7 @@ public class SelectorHandler extends Thread {
 		}
 	}
 
-	public SelectionKey register(SocketChannel channel, ChannelHandler channelHandler) throws IOException {
+	public SelectionKey register(SocketChannel channel, ChannelHandler<C> channelHandler) throws IOException {
 		keyLock.lock();
 		try {
 			if (!running) {
@@ -122,35 +128,60 @@ public class SelectorHandler extends Thread {
 		}
 	}
 
-	public ChannelHandler addChannel(SocketChannel channel, StripedQueue<Packet> queue) throws IOException {
+	public ChannelHandler<C> addChannel(SocketChannel channel, StripedQueue<Packet<C>> queue) {
 		keyLock.lock();
 		try {
 			if (!running) {
 				return null;
 			}
-			ChannelHandler channelHandler;
-			try {
-				channelHandler = new ChannelHandler(manager, channel, this, queue);
-			} catch (IOException e) {
-				manager.getLogger().info("Unable to create channel handler, " + e.getMessage());
-				return null;
+			ChannelHandler<C> channelHandler;
+			synchronized (channels) {
+				try {
+					channelHandler = new ChannelHandler<C>(manager, channel, this, queue);
+				} catch (IOException e) {
+					manager.getLogger().info("Unable to create channel handler, " + e.getMessage());
+					return null;
+				}
+				channels.put(channelHandler, Boolean.TRUE);
+				if (manager instanceof NetworkManagerImpl) {
+					((NetworkManagerImpl<C>) manager).register(channelHandler);
+				}
 			}
-			channels.put(channelHandler, Boolean.TRUE);
 			return channelHandler;
 		} finally {
 			keyLock.unlock();
 		}
 	}
 
+	public void closeSelector() {
+		selectorLock.lock();
+		try {
+			try {
+				if (selector != null) {
+					selector.close();
+				}
+			} catch (IOException e) {
+				manager.getLogger().info("Exception thrown when closing selector " + e);
+			}
+		} finally {
+			selectorLock.unlock();
+		}
+	}
 
 	public void shutdown(long timeout) {
 		selectorLock.lock();
 		try {
 			running = false;
 			Set<SelectionKey> keys = selector.keys();
-			for (SelectionKey key : keys) {
-				if (key.isValid()) {
-					((ChannelHandler) key.attachment()).shutdown(timeout);
+			if (keys.size() == 0) {
+				selector.wakeup();
+			} else {
+				for (SelectionKey key : keys) {
+					if (key.isValid()) {
+						@SuppressWarnings("unchecked")
+						ChannelHandler<C> handler = ((ChannelHandler<C>) key.attachment());
+						handler.shutdown(timeout);
+					}
 				}
 			}
 		} finally {
@@ -162,14 +193,21 @@ public class SelectorHandler extends Thread {
 		return timer;
 	}
 
-	public void notifyClosed(ChannelHandler handler) {
-		if (channels.remove(handler)) {
-			//manager.remove(handler);
-			selector.wakeup();
+	public void notifyClosed(ChannelHandler<C> handler) {
+		keyLock.lock();
+		try {
+			if (channels.remove(handler)) {
+				if (manager instanceof NetworkManagerImpl) {
+					((NetworkManagerImpl<C>) manager).deregister(handler);
+				}
+				selector.wakeup();
+			}
+		} finally {
+			keyLock.unlock();
 		}
 	}
-	
-	public void queueForSync(ChannelHandler handler) {
+
+	public void queueForSync(ChannelHandler<C> handler) {
 		channelHandlerSyncQueue.add(handler);
 		selector.wakeup();
 	}

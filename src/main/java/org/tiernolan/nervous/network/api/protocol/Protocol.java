@@ -2,7 +2,10 @@ package org.tiernolan.nervous.network.api.protocol;
 
 import java.nio.ByteBuffer;
 
-public interface Protocol {
+import org.tiernolan.nervous.network.api.connection.Connection;
+import org.tiernolan.nervous.network.api.connection.Network;
+
+public interface Protocol<C extends Connection<C>> {
 
 	/**
 	 * Gets the packet header size for this protocol
@@ -42,7 +45,7 @@ public interface Protocol {
 	 * @param header a ByteBuffer containing the packet header
 	 * @return the decoder, or null if the header is incomplete
 	 */
-	public Decoder<?> getPacketDecoder(ByteBuffer header);
+	public <P extends Packet<C>> Decoder<P, C> getPacketDecoder(ByteBuffer header);
 	
 	/**
 	 * Get the packet decoder from a packet header.
@@ -50,7 +53,7 @@ public interface Protocol {
 	 * @param packet the packet
 	 * @return the decoder, or null if the header is incomplete
 	 */
-	public Encoder<?> getPacketEncoder(Packet packet);
+	public <P extends Packet<C>> Encoder<P, C> getPacketEncoder(Packet<C> packet);
 	
 	/**
 	 * Get the packet decoder from a packet header.
@@ -58,6 +61,13 @@ public interface Protocol {
 	 * @param header the packet
 	 * @return the handler
 	 */
-	public Handler<?> getPacketHandler(Packet packet);
+	public <P extends Packet<C>> Handler<P, C> getPacketHandler(Packet<C> packet);
+	
+	/**
+	 * Gets a connection instance associated with this protocol
+	 * 
+	 * @return the connection
+	 */
+	public C newConnection(Network<C> network);
 	
 }

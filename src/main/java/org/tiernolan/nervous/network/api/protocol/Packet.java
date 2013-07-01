@@ -1,8 +1,9 @@
 package org.tiernolan.nervous.network.api.protocol;
 
+import org.tiernolan.nervous.network.api.connection.Connection;
 import org.tiernolan.nervous.network.api.queue.Striped;
 
-public interface Packet extends ProtocolComponent, Striped {
+public interface Packet<C extends Connection<C>> extends ProtocolComponent<C>, Striped {
 	
 	/**
 	 * Gets the stripe of the packet.<br>

@@ -1,7 +1,7 @@
 package org.tiernolan.nervous.network.connection;
 
 
-public interface Network {
+public interface ChannelControl {
 
 	/**
 	 * Clears the write request flag. 

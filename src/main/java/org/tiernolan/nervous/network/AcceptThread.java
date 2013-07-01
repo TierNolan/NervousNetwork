@@ -10,36 +10,42 @@ import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
 import java.util.Set;
 
-public class AcceptThread extends Thread {
+import org.tiernolan.nervous.network.api.connection.Connection;
 
+public class AcceptThread<C extends Connection<C>> extends Thread {
+
+	private final NetworkManagerImpl<C> manager;
 	private final ServerSocketChannel serverChannel;
 	private final Selector selector;
+	private volatile boolean running = true;
 	
-	public AcceptThread(int port) throws IOException {
-		this(new InetSocketAddress(port));
+	public AcceptThread(NetworkManagerImpl<C> manager, int port) throws IOException {
+		this(manager, new InetSocketAddress(port));
 	}
 
-	public AcceptThread(InetSocketAddress addr) throws IOException {
+	public AcceptThread(NetworkManagerImpl<C> manager, InetSocketAddress addr) throws IOException {
 		try {
+			this.setName("AcceptThread {" + addr + "}");
+			this.manager = manager;
 			this.selector = SelectorProvider.provider().openSelector();
 			this.serverChannel = ServerSocketChannel.open();
 			this.serverChannel.bind(addr);
+			this.serverChannel.configureBlocking(false);
 			this.serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 		} catch (IOException e) {
 			cleanup();
 			throw new IOException("Unable to start accept thread", e);
 		}
-		this.start();
 	}
 	
 	public void run() {
 		try {
-			while (!isInterrupted()) {
+			while (running) {
 				int k;
 				try {
 					k = selector.select();
-				} catch (IOException e1) {
-					// TODO - Logging
+				} catch (IOException e) {
+					manager.getLogger().info("Exception thrown by accept thread selector " + e);
 					break;
 				}
 				if (k <= 0) {
@@ -54,16 +60,20 @@ public class AcceptThread extends Thread {
 					try {
 						channel = serverChannel.accept();
 					} catch (IOException e) {
-						e.printStackTrace();
+						manager.getLogger().info("Exception thrown by server socket when accepting " + e);
 						continue;
 					}
-					// add to pool
+					manager.addChannel(channel);
 				}
 			}
-			
 		} finally {
 			cleanup();
 		}
+	}
+	
+	public void shutdown(long timeout) {
+		running = false;
+		selector.wakeup();
 	}
 
 	private void cleanup() {

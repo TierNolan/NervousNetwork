@@ -10,16 +10,17 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.tiernolan.nervous.network.NetworkManagerImpl;
 import org.tiernolan.nervous.network.api.NetworkManager;
+import org.tiernolan.nervous.network.api.connection.Connection;
 import org.tiernolan.nervous.network.api.protocol.Decoder;
 import org.tiernolan.nervous.network.api.protocol.Encoder;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
-public class SerdesImpl implements Serdes {
+public class SerdesImpl<C extends Connection<C>> implements Serdes<C> {
 	
-	private final static Packet shutdownPacket = new Packet() {
-		public Protocol getProtocol() {
+	private final Packet<C> shutdownPacket = new Packet<C>() {
+		public Protocol<C> getProtocol() {
 			return null;
 		}
 		public int getStripeId() {
@@ -27,11 +28,11 @@ public class SerdesImpl implements Serdes {
 		}
 	};
 	
-	private final NetworkManager manager;
-	private final Protocol protocol;
-	private final Network network;
-	private final StripedQueue<Packet> handlerQueue;
-	private final ConcurrentLinkedQueue<Packet> writeQueue = new ConcurrentLinkedQueue<Packet>();
+	private final NetworkManager<C> manager;
+	private final Protocol<C> protocol;
+	private final ChannelControl channelControl;
+	private final StripedQueue<Packet<C>> handlerQueue;
+	private final ConcurrentLinkedQueue<Packet<C>> writeQueue = new ConcurrentLinkedQueue<Packet<C>>();
 	
 	private boolean shutdown = false;
 	
@@ -45,20 +46,20 @@ public class SerdesImpl implements Serdes {
 	private boolean readingHeader;
 	private boolean seeking;
 
-	public SerdesImpl(NetworkManager manager, Network network, StripedQueue<Packet> handlerQueue) {
+	public SerdesImpl(NetworkManager<C> manager, ChannelControl channelControl, StripedQueue<Packet<C>> handlerQueue) {
 		this.manager = manager;
 		this.protocol = manager.getProtocol();
 		this.readingHeader = false;
 		this.seeking = true;
 		this.handlerQueue = handlerQueue;
-		this.network = network;
+		this.channelControl = channelControl;
 	}
 
-	public Protocol getProtocol() {
+	public Protocol<C> getProtocol() {
 		return protocol;
 	}
 	
-	public NetworkManager getNetworkManager() {
+	public NetworkManager<C> getNetworkManager() {
 		return manager;
 	}
 	
@@ -68,7 +69,7 @@ public class SerdesImpl implements Serdes {
 		while (true) {
 			if (seeking) {
 				if (header == null) {
-					headerRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(protocol.getPacketHeaderSize());
+					headerRef = ((NetworkManagerImpl<C>) manager).getByteBufferPool().get(protocol.getPacketHeaderSize());
 					header = headerRef.get();
 				}
 				read += Math.max(0, r = channel.read(header));
@@ -97,23 +98,23 @@ public class SerdesImpl implements Serdes {
 			} else {
 				if (body == null) {
 					int size = protocol.getPacketBodySize(header);
-					bodyRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(size);
+					bodyRef = ((NetworkManagerImpl<C>) manager).getByteBufferPool().get(size);
 					body = bodyRef.get();
 				}
 				read += Math.max(0, r = channel.read(body));
 				if (!body.hasRemaining()) {
 					body.flip();
-					Decoder<?> decoder = protocol.getPacketDecoder(header);
+					Decoder<Packet<C>, C> decoder = protocol.getPacketDecoder(header);
 					if (decoder == null) {
 						throw new IOException("No decoder found for packet header");
 					}
-					Packet p = decoder.decode(header, body);
+					Packet<C> p = decoder.decode(header, body);
 					if (p == null) {
 						throw new IOException("Decoding failed for packet");
 					}
 					handlerQueue.offer(p);
-					((NetworkManagerImpl) manager).getByteBufferPool().put(bodyRef);
-					((NetworkManagerImpl) manager).getByteBufferPool().put(headerRef);
+					((NetworkManagerImpl<C>) manager).getByteBufferPool().put(bodyRef);
+					((NetworkManagerImpl<C>) manager).getByteBufferPool().put(headerRef);
 					body = null;
 					bodyRef = null;
 					header = null;
@@ -133,9 +134,9 @@ public class SerdesImpl implements Serdes {
 		boolean blocked = false;
 		while (!blocked) {
 			if (write == null) {
-				Packet p;
+				Packet<C> p;
 				if (shutdown || (p = writeQueue.poll()) == null) {
-					network.clearWriteRequest();
+					channelControl.clearWriteRequest();
 					p = writeQueue.poll();
 					if (shutdown || p == null) {
 						return i;
@@ -144,17 +145,16 @@ public class SerdesImpl implements Serdes {
 				if (p == shutdownPacket) {
 					shutdown = true;
 					if (channel instanceof SocketChannel) {
-						network.close();
+						channelControl.close();
 					}
 					continue;
 				}
-				@SuppressWarnings("unchecked")
-				Encoder<Packet> e = (Encoder<Packet>) protocol.getPacketEncoder(p);
+				Encoder<Packet<C>, C> e = protocol.getPacketEncoder(p);
 				if (e == null) {
 					throw new IOException("No encoder found for packet");
 				}
 				int size = protocol.getPacketHeaderSize() + e.getPacketBodySize(p);
-				writeRef = ((NetworkManagerImpl) manager).getByteBufferPool().get(size);
+				writeRef = ((NetworkManagerImpl<C>) manager).getByteBufferPool().get(size);
 				write = writeRef.get();
 				e.encode(p, write);
 				write.flip();
@@ -162,7 +162,7 @@ public class SerdesImpl implements Serdes {
 			int written = channel.write(write);
 			
 			if (!write.hasRemaining()) {
-				((NetworkManagerImpl) manager).getByteBufferPool().put(writeRef);
+				((NetworkManagerImpl<C>) manager).getByteBufferPool().put(writeRef);
 				write = null;
 				writeRef = null;
 			}
@@ -174,9 +174,9 @@ public class SerdesImpl implements Serdes {
 		return i;
 	}
 	
-	public void writePacket(Packet p) {
+	public void writePacket(Packet<C> p) {
 		writeQueue.add(p);
-		network.setWriteRequest();
+		channelControl.setWriteRequest();
 	}
 
 	public void shutdown() {

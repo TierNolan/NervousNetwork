@@ -2,7 +2,9 @@ package org.tiernolan.nervous.network.api.protocol;
 
 import java.nio.ByteBuffer;
 
-public interface Decoder<T extends Packet> extends ProtocolComponent {
+import org.tiernolan.nervous.network.api.connection.Connection;
+
+public interface Decoder<P extends Packet<C>, C extends Connection<C>> extends ProtocolComponent<C> {
 
 	/**
 	 * Decodes a packet from the packet header and body
@@ -11,6 +13,6 @@ public interface Decoder<T extends Packet> extends ProtocolComponent {
 	 * @param body a ByteBuffer containing the body
 	 * @return the decoded packet, or null on failure
 	 */
-	public T decode(ByteBuffer header, ByteBuffer body);
+	public Packet<C> decode(ByteBuffer header, ByteBuffer body);
 
 }

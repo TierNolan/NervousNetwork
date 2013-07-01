@@ -3,7 +3,7 @@ package org.tiernolan.nervous.network.connection;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public class SimpleNetwork implements Network {
+public class SimpleNetwork implements ChannelControl {
 
 	private AtomicBoolean writeRequest = new AtomicBoolean(false);
 	
