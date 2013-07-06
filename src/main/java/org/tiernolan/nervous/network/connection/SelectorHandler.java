@@ -16,7 +16,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.tiernolan.nervous.network.NetworkManagerImpl;
 import org.tiernolan.nervous.network.api.NetworkManager;
 import org.tiernolan.nervous.network.api.connection.Connection;
-import org.tiernolan.nervous.network.api.protocol.Packet;
+import org.tiernolan.nervous.network.queue.PacketWrapper;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
 public class SelectorHandler<C extends Connection<C>> extends Thread {
@@ -128,7 +128,7 @@ public class SelectorHandler<C extends Connection<C>> extends Thread {
 		}
 	}
 
-	public ChannelHandler<C> addChannel(SocketChannel channel, StripedQueue<Packet<C>> queue) {
+	public ChannelHandler<C> addChannel(SocketChannel channel, StripedQueue<PacketWrapper<C>> queue) {
 		keyLock.lock();
 		try {
 			if (!running) {

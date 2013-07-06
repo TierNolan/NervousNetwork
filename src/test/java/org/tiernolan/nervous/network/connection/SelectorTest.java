@@ -18,6 +18,7 @@ import org.tiernolan.nervous.network.api.NetworkManager;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.connection.SimpleProtocol.GenericPacket;
 import org.tiernolan.nervous.network.queue.Completable;
+import org.tiernolan.nervous.network.queue.PacketWrapper;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 import org.tiernolan.nervous.network.queue.StripedQueueImpl;
 
@@ -32,7 +33,7 @@ public class SelectorTest {
 
 		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new StripedQueueImpl<PacketWrapper<SimpleConnection>>();
 		
 		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
@@ -51,7 +52,7 @@ public class SelectorTest {
 		
 		writeIntPacket(out, 42);
 		
-		Packet<SimpleConnection> p = queue.take().getStriped();
+		Packet<SimpleConnection> p = queue.take().getStriped().getPacket();
 		
 		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 42);
 		
@@ -75,7 +76,7 @@ public class SelectorTest {
 
 		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new StripedQueueImpl<PacketWrapper<SimpleConnection>>();
 		
 		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
@@ -119,7 +120,7 @@ public class SelectorTest {
 
 		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new StripedQueueImpl<PacketWrapper<SimpleConnection>>();
 		
 		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
@@ -170,7 +171,7 @@ public class SelectorTest {
 
 		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new StripedQueueImpl<PacketWrapper<SimpleConnection>>();
 		
 		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 
@@ -198,8 +199,8 @@ public class SelectorTest {
 		}
 		
 		for (int i = 0; i < values.length; i++) {
-			Completable<Packet<SimpleConnection>> c = queue.take();
-			Packet<SimpleConnection> p = (Packet<SimpleConnection>) c.getStriped();
+			Completable<PacketWrapper<SimpleConnection>> c = queue.take();
+			Packet<SimpleConnection> p = (Packet<SimpleConnection>) c.getStriped().getPacket();
 			assertEquals("Packet decode failure", ((GenericPacket) p).getData(), values[i]);
 			c.done();
 		}
@@ -225,7 +226,7 @@ public class SelectorTest {
 
 		NetworkManager<SimpleConnection> manager = new NetworkManagerImpl<SimpleConnection>(protocol);
 
-		StripedQueue<Packet<SimpleConnection>> queue = new StripedQueueImpl<Packet<SimpleConnection>>();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new StripedQueueImpl<PacketWrapper<SimpleConnection>>();
 		
 		SelectorHandler<SimpleConnection> selectorHandler = new SelectorHandler<SimpleConnection>(manager);
 

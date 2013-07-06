@@ -2,59 +2,59 @@ package org.tiernolan.nervous.network.connection;
 
 import java.util.LinkedList;
 
-import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.queue.Completable;
+import org.tiernolan.nervous.network.queue.PacketWrapper;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
-public class SimpleStripedQueue implements StripedQueue<Packet<SimpleConnection>> {
+public class SimpleStripedQueue implements StripedQueue<PacketWrapper<SimpleConnection>> {
 	
-	private LinkedList<Packet<SimpleConnection>> queue = new LinkedList<Packet<SimpleConnection>>();
+	private LinkedList<PacketWrapper<SimpleConnection>> queue = new LinkedList<PacketWrapper<SimpleConnection>>();
 
-	public boolean offer(Packet<SimpleConnection> p) {
-		return queue.offer(p);
+	public boolean offer(PacketWrapper<SimpleConnection> w) {
+		return queue.offer(w);
 	}
 
-	public Packet<SimpleConnection> peek() {
+	public PacketWrapper<SimpleConnection> peek() {
 		return queue.peek();
 	}
 
-	public Completable<Packet<SimpleConnection>> poll() {
-		Packet<SimpleConnection> p = queue.poll();
-		if (p == null) {
+	public Completable<PacketWrapper<SimpleConnection>> poll() {
+		PacketWrapper<SimpleConnection> w = queue.poll();
+		if (w == null) {
 			return null;
 		}
-		return new SimpleCompletableStriped(p);
+		return new SimpleCompletableStriped(w);
 	}
 
-	public Completable<Packet<SimpleConnection>> take() throws InterruptedException {
-		Packet<SimpleConnection> p = queue.poll();
-		if (p == null) {
+	public Completable<PacketWrapper<SimpleConnection>> take() throws InterruptedException {
+		PacketWrapper<SimpleConnection> w = queue.poll();
+		if (w == null) {
 			throw new IllegalStateException("Attempt made to take packet when queue was empty");
 		}
-		return new SimpleCompletableStriped(p);		
+		return new SimpleCompletableStriped(w);		
 	}
 
 	public boolean isEmpty() {
 		return queue.isEmpty();
 	}
 
-	private class SimpleCompletableStriped implements Completable<Packet<SimpleConnection>> {
+	private class SimpleCompletableStriped implements Completable<PacketWrapper<SimpleConnection>> {
 		
-		private final Packet<SimpleConnection> packet;
+		private final PacketWrapper<SimpleConnection> wrapper;
 		
-		public SimpleCompletableStriped(Packet<SimpleConnection> packet) {
-			this.packet = packet;
+		public SimpleCompletableStriped(PacketWrapper<SimpleConnection> wrapper) {
+			this.wrapper = wrapper;
 		}
 
 		public int getStripeId() {
-			return packet.getStripeId();
+			return wrapper.getStripeId();
 		}
 
 		public void done() {
 		}
 
-		public Packet<SimpleConnection> getStriped() {
-			return packet;
+		public PacketWrapper<SimpleConnection> getStriped() {
+			return wrapper;
 		}
 		
 	}

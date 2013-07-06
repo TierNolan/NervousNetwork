@@ -15,6 +15,7 @@ import org.tiernolan.nervous.network.api.protocol.Decoder;
 import org.tiernolan.nervous.network.api.protocol.Encoder;
 import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
+import org.tiernolan.nervous.network.queue.PacketWrapper;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
 public class SerdesImpl<C extends Connection<C>> implements Serdes<C> {
@@ -30,8 +31,9 @@ public class SerdesImpl<C extends Connection<C>> implements Serdes<C> {
 	
 	private final NetworkManager<C> manager;
 	private final Protocol<C> protocol;
+	private final C connection;
 	private final ChannelControl channelControl;
-	private final StripedQueue<Packet<C>> handlerQueue;
+	private final StripedQueue<PacketWrapper<C>> handlerQueue;
 	private final ConcurrentLinkedQueue<Packet<C>> writeQueue = new ConcurrentLinkedQueue<Packet<C>>();
 	
 	private boolean shutdown = false;
@@ -46,12 +48,13 @@ public class SerdesImpl<C extends Connection<C>> implements Serdes<C> {
 	private boolean readingHeader;
 	private boolean seeking;
 
-	public SerdesImpl(NetworkManager<C> manager, ChannelControl channelControl, StripedQueue<Packet<C>> handlerQueue) {
+	public SerdesImpl(NetworkManager<C> manager, ChannelControl channelControl, StripedQueue<PacketWrapper<C>> handlerQueue) {
 		this.manager = manager;
 		this.protocol = manager.getProtocol();
 		this.readingHeader = false;
 		this.seeking = true;
 		this.handlerQueue = handlerQueue;
+		this.connection = protocol.newConnection(this);
 		this.channelControl = channelControl;
 	}
 
@@ -112,7 +115,7 @@ public class SerdesImpl<C extends Connection<C>> implements Serdes<C> {
 					if (p == null) {
 						throw new IOException("Decoding failed for packet");
 					}
-					handlerQueue.offer(p);
+					handlerQueue.offer(new PacketWrapper<C>(connection, p));
 					((NetworkManagerImpl<C>) manager).getByteBufferPool().put(bodyRef);
 					((NetworkManagerImpl<C>) manager).getByteBufferPool().put(headerRef);
 					body = null;

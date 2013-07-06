@@ -1,6 +1,7 @@
 package org.tiernolan.nervous.network.connection;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.tiernolan.nervous.network.api.connection.Connection;
 import org.tiernolan.nervous.network.api.connection.Network;
@@ -12,7 +13,8 @@ import org.tiernolan.nervous.network.api.protocol.Protocol;
 
 public class SimpleProtocol implements Protocol<SimpleConnection> {
 	
-	private final int[] bodySizes = new int[] {4, 8}; 
+	private final int[] bodySizes = new int[] {4, 8, 4}; 
+
 	@SuppressWarnings("unchecked")
 	private final Decoder<GenericPacket, SimpleConnection>[] decoders = new Decoder[] {
 			new Decoder<GenericPacket, SimpleConnection>() {
@@ -46,7 +48,23 @@ public class SimpleProtocol implements Protocol<SimpleConnection> {
 						}
 					};
 				}
-			}
+			},
+			new Decoder<GenericPacket, SimpleConnection>() {
+
+				public Protocol<SimpleConnection> getProtocol() {
+					return SimpleProtocol.this;
+				}
+
+				public GenericPacket decode(ByteBuffer header, ByteBuffer body) {
+					final Integer data = body.getInt();
+					return new GenericPacket(2, 1) {
+						@Override
+						public Object getData() {
+							return data;
+						}
+					};
+				}
+			},
 	};
 	
 	@SuppressWarnings("unchecked")
@@ -81,6 +99,70 @@ public class SimpleProtocol implements Protocol<SimpleConnection> {
 
 				public int getPacketBodySize(GenericPacket packet) {
 					return 8;
+				}
+			},
+			new Encoder<GenericPacket, SimpleConnection>() {
+
+				public Protocol<SimpleConnection> getProtocol() {
+					return SimpleProtocol.this;
+				}
+
+				public void encode(GenericPacket packet, ByteBuffer buf) {
+					buf.putShort((short) 0xAA55);
+					buf.putShort((short) packet.getType());
+					buf.putInt((Integer) packet.getData());
+				}
+
+				public int getPacketBodySize(GenericPacket packet) {
+					return 4;
+				}
+			}
+	};
+
+	@SuppressWarnings("unchecked")
+	private Handler<GenericPacket, SimpleConnection>[] handlers = new Handler[] {
+			new Handler<GenericPacket, SimpleConnection>() {
+
+				public Protocol<SimpleConnection> getProtocol() {
+					return SimpleProtocol.this;
+				}
+
+				public void handle(Connection<SimpleConnection> connection, GenericPacket packet) {
+					if (Integer.valueOf(-1).equals(packet.getData())) {
+						connection.getNetwork().shutdown();
+					} else {
+						connection.getNetwork().writePacket(packet);
+					}
+				}
+			},
+			new Handler<GenericPacket, SimpleConnection>() {
+
+				public Protocol<SimpleConnection> getProtocol() {
+					return SimpleProtocol.this;
+				}
+
+				public void handle(Connection<SimpleConnection> connection, final GenericPacket packet) {
+					connection.getNetwork().writePacket(new GenericPacket(1) {
+						@Override
+						public Object getData() {
+							return ((Long) packet.getData()) + 1;
+						}
+					});
+				}
+			},
+			new Handler<GenericPacket, SimpleConnection>() {
+
+				private AtomicInteger last = new AtomicInteger(0);
+				
+				public Protocol<SimpleConnection> getProtocol() {
+					return SimpleProtocol.this;
+				}
+
+				public void handle(Connection<SimpleConnection> connection, GenericPacket packet) {
+					int expected = last.getAndIncrement();
+					if (!packet.getData().equals(expected)) {
+						connection.getNetwork().writePacket(packet);
+					}
 				}
 			}
 	};
@@ -126,16 +208,7 @@ public class SimpleProtocol implements Protocol<SimpleConnection> {
 
 	@SuppressWarnings("unchecked")
 	public <P extends Packet<SimpleConnection>> Handler<P, SimpleConnection> getPacketHandler(Packet<SimpleConnection> packet) {
-		return (Handler<P, SimpleConnection>) new Handler<GenericPacket, SimpleConnection>() {
-
-			public Protocol<SimpleConnection> getProtocol() {
-				return SimpleProtocol.this;
-			}
-
-			public void handle(Connection<SimpleConnection> connection, GenericPacket packet) {
-				connection.getNetwork().writePacket(packet);
-			}
-		};
+		return (Handler<P, SimpleConnection>) handlers[((GenericPacket) packet).getType()];
 	}
 
 	public int getPacketBodySize(ByteBuffer header) {
@@ -154,9 +227,14 @@ public class SimpleProtocol implements Protocol<SimpleConnection> {
 	public abstract class GenericPacket implements Packet<SimpleConnection> {
 		
 		private final int type;
+		private final int stripeId;
 		
 		public GenericPacket(int type) {
+			this(type, 0);
+		}
+		public GenericPacket(int type, int stripeId) {
 			this.type = type;
+			this.stripeId = stripeId;
 		}
 		
 		public int getType() {
@@ -170,7 +248,7 @@ public class SimpleProtocol implements Protocol<SimpleConnection> {
 		}
 
 		public int getStripeId() {
-			return 0;
+			return stripeId;
 		}
 		
 		public String toString() {

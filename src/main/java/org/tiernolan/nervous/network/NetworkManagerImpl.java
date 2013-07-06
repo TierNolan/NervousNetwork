@@ -19,6 +19,8 @@ import org.tiernolan.nervous.network.api.protocol.Protocol;
 import org.tiernolan.nervous.network.bufferpool.ByteBufferPool;
 import org.tiernolan.nervous.network.connection.ChannelHandler;
 import org.tiernolan.nervous.network.connection.SelectorHandler;
+import org.tiernolan.nervous.network.queue.PacketWrapper;
+import org.tiernolan.nervous.network.queue.StripedExecutor;
 import org.tiernolan.nervous.network.queue.StripedMergingQueue;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 import org.tiernolan.nervous.network.queue.StripedQueueImpl;
@@ -29,9 +31,10 @@ public class NetworkManagerImpl<C extends Connection<C>> implements NetworkManag
 	private final ByteBufferPool byteBufferPool;
 	private final Logger logger;
 	private final ExecutorService pool;
+	private final StripedExecutor<C> handlerPool; 
 	private final SelectorHandler<C>[] selectorHandlers;
 	private final AtomicInteger selectorCounter = new AtomicInteger(0);
-	private final StripedMergingQueue<Packet<C>> masterQueue;
+	private final StripedMergingQueue<PacketWrapper<C>> masterQueue;
 	private final ConcurrentHashMap<ChannelHandler<C>, Boolean> channels = new ConcurrentHashMap<ChannelHandler<C>, Boolean>();
 	private final ConcurrentLinkedQueue<AcceptThread<C>> acceptThreads = new ConcurrentLinkedQueue<AcceptThread<C>>();
 	private boolean running = true;
@@ -43,7 +46,7 @@ public class NetworkManagerImpl<C extends Connection<C>> implements NetworkManag
 	
 	public NetworkManagerImpl(int selectors, int poolSize, Protocol<C> protocol) {
 		this.protocol = protocol;
-		this.masterQueue = new StripedMergingQueue<Packet<C>>();
+		this.masterQueue = new StripedMergingQueue<PacketWrapper<C>>();
 		this.byteBufferPool = new ByteBufferPool(protocol.getMaxPacketSize());
 		this.logger = Logger.getLogger(getClass().getName());
 		this.pool = Executors.newFixedThreadPool(poolSize);
@@ -61,6 +64,7 @@ public class NetworkManagerImpl<C extends Connection<C>> implements NetworkManag
 		for (int i = 0; i < selectorHandlers.length; i++) {
 			selectorHandlers[i].start();
 		}
+		handlerPool = new StripedExecutor<C>(this, masterQueue, poolSize);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -78,7 +82,7 @@ public class NetworkManagerImpl<C extends Connection<C>> implements NetworkManag
 	
 	public boolean addChannel(SocketChannel channel) {
 		SelectorHandler<C> selectorHandler = selectorHandlers[selectorCounter.getAndIncrement() % selectorHandlers.length];
-		StripedQueue<Packet<C>> channelQueue = new StripedQueueImpl<Packet<C>>(masterQueue);
+		StripedQueue<PacketWrapper<C>> channelQueue = new StripedQueueImpl<PacketWrapper<C>>(masterQueue);
 		ChannelHandler<C> channelHandler = selectorHandler.addChannel(channel, channelQueue);
 		return channelHandler != null;
 	}
@@ -139,8 +143,11 @@ public class NetworkManagerImpl<C extends Connection<C>> implements NetworkManag
 		for (SelectorHandler<C> h : selectorHandlers) {
 			h.shutdown(timeout);
 		}
-		List<Thread> threads = new ArrayList<Thread>(acceptThreads.size() + selectorHandlers.length);
+		handlerPool.shutdown();
+		List<Thread> handlerPoolThreads = handlerPool.getThreads();
+		List<Thread> threads = new ArrayList<Thread>(acceptThreads.size() + selectorHandlers.length + handlerPoolThreads.size());
 		threads.addAll(acceptThreads);
+		threads.addAll(handlerPoolThreads);
 		for (Thread s : selectorHandlers) {
 			threads.add(s);
 		}

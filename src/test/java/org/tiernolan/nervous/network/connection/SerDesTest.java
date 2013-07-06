@@ -1,8 +1,8 @@
 package org.tiernolan.nervous.network.connection;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -11,10 +11,10 @@ import java.util.Random;
 import org.junit.Test;
 import org.tiernolan.nervous.network.NetworkManagerImpl;
 import org.tiernolan.nervous.network.api.NetworkManager;
-import org.tiernolan.nervous.network.api.protocol.Packet;
 import org.tiernolan.nervous.network.api.protocol.Protocol;
 import org.tiernolan.nervous.network.connection.SimpleProtocol.GenericPacket;
 import org.tiernolan.nervous.network.queue.Completable;
+import org.tiernolan.nervous.network.queue.PacketWrapper;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
 public class SerDesTest  {
@@ -28,7 +28,7 @@ public class SerDesTest  {
 		
 		SimpleNetwork network = new SimpleNetwork();
 		
-		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new SimpleStripedQueue();
 		
 		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 		
@@ -38,9 +38,9 @@ public class SerDesTest  {
 	
 		serdes.read(channel);
 		
-		Packet<SimpleConnection> p = queue.poll().getStriped();
+		PacketWrapper<SimpleConnection> w = queue.poll().getStriped();
 		
-		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 7);		
+		assertEquals("Packet decode failure", ((GenericPacket) w.getPacket()).getData(), 7);		
 		
 	}
 	
@@ -53,7 +53,7 @@ public class SerDesTest  {
 		
 		SimpleNetwork network = new SimpleNetwork();
 		
-		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new SimpleStripedQueue();
 		
 		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 		
@@ -74,15 +74,15 @@ public class SerDesTest  {
 
 		serdes.read(channel);
 		
-		Packet<SimpleConnection> p = queue.poll().getStriped();
+		PacketWrapper<SimpleConnection> w = queue.poll().getStriped();
 		
-		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 7);		
+		assertEquals("Packet decode failure", ((GenericPacket) w.getPacket()).getData(), 7);		
 		
-		p = queue.poll().getStriped();
+		w = queue.poll().getStriped();
 		
-		assertEquals("Packet decode failure", ((GenericPacket) p).getData(), 1234567);
+		assertEquals("Packet decode failure", ((GenericPacket) w.getPacket()).getData(), 1234567);
 		
-		Completable<Packet<SimpleConnection>> completable = queue.poll();
+		Completable<PacketWrapper<SimpleConnection>> completable = queue.poll();
 		
 		assertTrue("Unexpected packet decoded", completable == null);
 
@@ -96,7 +96,7 @@ public class SerDesTest  {
 
 		SimpleNetwork network = new SimpleNetwork();
 
-		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new SimpleStripedQueue();
 
 		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 
@@ -115,8 +115,8 @@ public class SerDesTest  {
 		serdes.read(channel);
 		
 		for (int i = 0; i < values.length; i++) {
-			Packet<SimpleConnection> p = (Packet<SimpleConnection>) queue.poll().getStriped();
-			assertEquals("Packet decode failure", ((GenericPacket) p).getData(), values[i]);
+			PacketWrapper<SimpleConnection> w = (PacketWrapper<SimpleConnection>) queue.poll().getStriped();
+			assertEquals("Packet decode failure", ((GenericPacket) w.getPacket()).getData(), values[i]);
 		}
 		
 		assertTrue("Unexpected packet decoded", queue.poll() == null);
@@ -131,7 +131,7 @@ public class SerDesTest  {
 
 		SimpleNetwork network = new SimpleNetwork();
 
-		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new SimpleStripedQueue();
 
 		Serdes<SimpleConnection> serdes = new SerdesImpl<SimpleConnection>(manager, network, queue);
 		
@@ -185,7 +185,7 @@ public class SerDesTest  {
 
 		SimpleNetwork network = new SimpleNetwork();
 
-		StripedQueue<Packet<SimpleConnection>> queue = new SimpleStripedQueue();
+		StripedQueue<PacketWrapper<SimpleConnection>> queue = new SimpleStripedQueue();
 
 		Serdes<SimpleConnection> serdesEncoder = new SerdesImpl<SimpleConnection>(manager, network, null);
 		
@@ -219,7 +219,7 @@ public class SerDesTest  {
 		}
 		
 		while (!queue.isEmpty()) {
-			GenericPacket p = (GenericPacket) queue.poll().getStriped();
+			GenericPacket p = (GenericPacket) queue.poll().getStriped().getPacket();
 			if (p.getData() instanceof Long) {
 				assertEquals("Packet type and data mismatch", p.getType(), 1);
 				assertEquals("Packet contains wrong data", p.getData(), longList.poll());

@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.tiernolan.nervous.network.api.NetworkManager;
 import org.tiernolan.nervous.network.api.connection.Connection;
-import org.tiernolan.nervous.network.api.protocol.Packet;
+import org.tiernolan.nervous.network.queue.PacketWrapper;
 import org.tiernolan.nervous.network.queue.StripedQueue;
 
 public class ChannelHandler<C extends Connection<C>> implements ChannelControl {
@@ -35,12 +35,15 @@ public class ChannelHandler<C extends Connection<C>> implements ChannelControl {
 	private final Runnable readRunnable;
 	private final Runnable writeRunnable;
 	
-	public ChannelHandler(final NetworkManager<C> manager, final SocketChannel channel, final SelectorHandler<C> selectorHandler, StripedQueue<Packet<C>> queue) throws IOException {
+	public ChannelHandler(final NetworkManager<C> manager, final SocketChannel channel, final SelectorHandler<C> selectorHandler, StripedQueue<PacketWrapper<C>> queue) throws IOException {
 		readRunnable = new Runnable() {
 			public void run() {
 				try {
 					serdes.read(channel);
 				} catch (IOException e) {
+					close();
+				} catch (Throwable t) {
+					manager.getLogger().info("Channel read threw " + t);
 					close();
 				} finally {
 					if (!inProgress.compareAndSet(HandlerState.RUNNING, HandlerState.IDLE)) {
@@ -55,6 +58,9 @@ public class ChannelHandler<C extends Connection<C>> implements ChannelControl {
 				try {
 					serdes.write(channel);
 				} catch (IOException e) {
+					close();
+				} catch (Throwable t) {
+					manager.getLogger().info("Channel write threw " + t);
 					close();
 				} finally {
 					if (!inProgress.compareAndSet(HandlerState.RUNNING, HandlerState.IDLE)) {
